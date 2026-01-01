@@ -1,0 +1,53 @@
+Omniverse 實作題目 — 建立可管理多個鏡頭並擷取影像的 Extension
+題目說明
+請建立一個 Omniverse Extension，提供可同時管理多個 Camera，並依照使用者設定擷取影像的功能。Extension 需整合 UI、Camera 控制、影像擷取與檔案輸出流程，並在界面上提供即時更新資訊。
+
+主要要求
+1. UI Panel（使用 omni.ui）
+需建立一個獨立的 UI Panel，包含以下元素：
+	•	Camera 管理區（列表形式）
+	•	Camera 新增/刪除按鈕
+	•	全域設定區（例如輸出資料夾路徑、擷取模式）
+	•	Logs / 狀態顯示區
+2. Camera 選擇與管理
+	•	使用者可從目前場景中掃描並選擇多個 Camera Prim。
+	•	提供 UI 表單（下拉選單）。
+	•	使用者可將 Camera 加入擷取列表或移除。
+3. Camera 個別設定
+對每個 Camera 提供以下可調參數：
+	•	解析度（Width / Height）
+	•	FPS
+	•	是否啟用該 Camera 的擷取
+	•	（選擇性）輸出格式（PNG / JPG）
+4. 影像擷取流程
+Extension 應支援：
+	•	自動為每個 Camera 建立 viewport 或使用 render product
+	•	根據使用者設定進行擷取（定時或按下按鈕觸發）
+	•	檔名需包含時間戳、Camera 名稱、Frame index
+	•	支援同時擷取多個 Camera（可逐幀或並行）
+5. UI 狀態顯示
+需在 UI 中即時顯示：
+	•	擷取狀態（擷取中 / 已停止 / Error）
+	•	每個 Camera 最近輸出的檔案（路徑或縮圖）
+	•	Global Log：顯示最新 10 筆擷取紀錄（可用 omni.ui.Label 或 ScrollFrame）
+
+可選加分項
+UI / 操作加分
+	•	Camera Grouping（可批量設定參數）
+	•	預覽縮圖可以即時更新（非必須）
+Camera 控制加分
+	•	即時調整：
+	•	FOV
+	•	Exposure
+	•	Focal Length
+	•	Focus Distance
+功能加分
+	•	錄影輸出（將影格打包成影片）
+	•	自動建立輸出資料夾（依場景名稱 / 時間戳分組）
+
+參考介面
+	•	介面設計沒有限制，以下只是參考
+
+參考資料
+	•	Omniverse Replicator 基礎功能 https://docs.omniverse.nvidia.com/extensions/latest/ext_replicator/basic_functionalities.html
+	•	omni.ui 元件 https://docs.omniverse.nvidia.com/kit/docs/omni.ui/latest/index.html
