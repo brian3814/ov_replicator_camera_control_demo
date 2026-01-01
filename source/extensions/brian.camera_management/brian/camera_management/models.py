@@ -20,6 +20,12 @@ class CaptureStatus(Enum):
     ERROR = "Error"
 
 
+class CaptureMode(Enum):
+    """Capture output mode."""
+    IMAGE = "Image Sequence"
+    VIDEO = "Video"
+
+
 @dataclass
 class CameraSettings:
     """Settings for a single camera in the capture list."""
@@ -32,6 +38,8 @@ class CameraSettings:
     output_rgb: bool = True
     last_capture_path: Optional[str] = None
     frame_counter: int = 0
+    capture_mode: CaptureMode = CaptureMode.IMAGE
+    fps: int = 30  # For video mode
 
 
 @dataclass

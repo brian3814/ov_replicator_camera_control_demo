@@ -9,5 +9,6 @@
 # its affiliates is strictly prohibited.
 
 from .extension import CameraManagementExtension
-from .models import CameraSettings, GlobalSettings, CaptureStatus
+from .models import CameraSettings, GlobalSettings, CaptureStatus, CaptureMode
 from .camera_manager import CameraManager
+from .video_writer import VideoWriter

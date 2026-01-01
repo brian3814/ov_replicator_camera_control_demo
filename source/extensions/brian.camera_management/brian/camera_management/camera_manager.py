@@ -18,7 +18,8 @@ import omni.kit.app
 import omni.replicator.core as rep
 from pxr import UsdGeom
 
-from .models import CameraSettings, CaptureStatus
+from .models import CameraSettings, CaptureStatus, CaptureMode
+from .video_writer import VideoWriter
 
 
 class CameraManager:
@@ -82,7 +83,7 @@ class CameraManager:
 
     def _setup_writer(self, camera_settings: CameraSettings, output_folder: str) -> bool:
         """
-        Set up BasicWriter for a camera.
+        Set up writer for a camera (BasicWriter for images, VideoWriter for video).
 
         Args:
             camera_settings: Settings for the camera.
@@ -96,12 +97,24 @@ class CameraManager:
             camera_output = os.path.join(output_folder, camera_name)
             os.makedirs(camera_output, exist_ok=True)
 
-            writer = rep.WriterRegistry.get("BasicWriter")
-            writer.initialize(
-                output_dir=camera_output,
-                rgb=camera_settings.output_rgb,
-                frame_padding=6
-            )
+            if camera_settings.capture_mode == CaptureMode.VIDEO:
+                # Video mode - use custom VideoWriter
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                video_path = os.path.join(camera_output, f"{camera_name}_{timestamp}.mp4")
+                writer = VideoWriter(
+                    video_filepath=video_path,
+                    fps=camera_settings.fps,
+                    width=camera_settings.width,
+                    height=camera_settings.height
+                )
+            else:
+                # Image mode - use BasicWriter
+                writer = rep.WriterRegistry.get("BasicWriter")
+                writer.initialize(
+                    output_dir=camera_output,
+                    rgb=camera_settings.output_rgb,
+                    frame_padding=6
+                )
 
             render_product = self._render_products.get(camera_settings.prim_path)
             if render_product:
@@ -220,12 +233,15 @@ class CameraManager:
         if self._update_subscription:
             self._update_subscription = None
 
-        # Detach and cleanup writers
+        # Finalize and detach writers
         for prim_path, writer in self._writers.items():
             try:
+                # Call on_final_frame for VideoWriter to finalize encoding
+                if hasattr(writer, 'on_final_frame'):
+                    writer.on_final_frame()
                 writer.detach()
             except Exception as e:
-                print(f"[brian.camera_management] Error detaching writer: {e}")
+                print(f"[brian.camera_management] Error cleaning up writer: {e}")
 
         self._writers.clear()
         self._render_products.clear()

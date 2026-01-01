@@ -19,7 +19,7 @@ import omni.ui as ui
 from omni.kit.window.filepicker import FilePickerDialog
 from omni.kit.viewport.utility import get_active_viewport
 
-from .models import CameraSettings, GlobalSettings, CaptureStatus
+from .models import CameraSettings, GlobalSettings, CaptureStatus, CaptureMode
 from .camera_manager import CameraManager
 
 
@@ -327,18 +327,50 @@ class CameraManagementExtension(omni.ext.IExt):
                     style={"background_color": preview_btn_color}
                 )
 
-                # Image output types (collapsible)
-                with ui.CollapsableFrame("Image Output Types", collapsed=True):
-                    with ui.VStack(spacing=3):
-                        with ui.HStack(height=20):
-                            rgb_checkbox = ui.CheckBox(width=20)
-                            rgb_checkbox.model.set_value(camera_settings.output_rgb)
+                # Capture Mode selector
+                with ui.HStack(height=25, spacing=5):
+                    ui.Label("Capture Mode:", width=100)
+                    mode_combo = ui.ComboBox(
+                        0 if camera_settings.capture_mode == CaptureMode.IMAGE else 1,
+                        "Image Sequence",
+                        "Video"
+                    )
 
-                            def on_rgb_changed(model, idx=index):
-                                self._camera_list[idx].output_rgb = model.get_value_as_bool()
+                    def on_mode_changed(model, item, idx=index):
+                        selected = model.get_item_value_model().get_value_as_int()
+                        self._camera_list[idx].capture_mode = (
+                            CaptureMode.IMAGE if selected == 0 else CaptureMode.VIDEO
+                        )
+                        self._rebuild_camera_panels()  # Refresh to show/hide FPS field
 
-                            rgb_checkbox.model.add_value_changed_fn(on_rgb_changed)
-                            ui.Label("RGB", width=100)
+                    mode_combo.model.add_item_changed_fn(on_mode_changed)
+
+                # FPS field (only show for video mode)
+                if camera_settings.capture_mode == CaptureMode.VIDEO:
+                    with ui.HStack(height=25, spacing=5):
+                        ui.Label("FPS:", width=50)
+                        fps_field = ui.IntField(width=80)
+                        fps_field.model.set_value(camera_settings.fps)
+
+                        def on_fps_changed(model, idx=index):
+                            value = max(1, min(120, model.get_value_as_int()))
+                            self._camera_list[idx].fps = value
+
+                        fps_field.model.add_value_changed_fn(on_fps_changed)
+
+                # Image output types (collapsible) - only show for image mode
+                if camera_settings.capture_mode == CaptureMode.IMAGE:
+                    with ui.CollapsableFrame("Image Output Types", collapsed=True):
+                        with ui.VStack(spacing=3):
+                            with ui.HStack(height=20):
+                                rgb_checkbox = ui.CheckBox(width=20)
+                                rgb_checkbox.model.set_value(camera_settings.output_rgb)
+
+                                def on_rgb_changed(model, idx=index):
+                                    self._camera_list[idx].output_rgb = model.get_value_as_bool()
+
+                                rgb_checkbox.model.add_value_changed_fn(on_rgb_changed)
+                                ui.Label("RGB", width=100)
 
         return frame
 

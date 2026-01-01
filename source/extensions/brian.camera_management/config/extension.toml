@@ -27,6 +27,7 @@ repository = "https://github.com/NVIDIA-Omniverse/kit-app-template"  # URL of th
 "omni.replicator.core" = {}
 "omni.kit.window.filepicker" = {}
 "omni.kit.viewport.utility" = {}
+"omni.kit.pip_archive" = {}  # Provides numpy and PIL
 
 
 [settings]
