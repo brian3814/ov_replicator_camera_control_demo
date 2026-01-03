@@ -114,15 +114,20 @@ class CameraPanelWidget:
 
     def _build_enabled_checkbox(self):
         """Build the enabled checkbox row."""
-        with ui.HStack(height=0, spacing=SPACING):
-            def on_enabled_changed(model):
-                self._settings.enabled = model.get_value_as_bool()
+        with ui.HStack(height=25, spacing=SPACING):
+            ui.Label("Enabled:", width=100)
+            enabled_combo = ui.ComboBox(
+                0 if self._settings.enabled else 1,
+                "True",
+                "False"
+            )
+
+            def on_enabled_changed(model, item):
+                selected = model.get_item_value_model().get_value_as_int()
+                self._settings.enabled = (selected == 0)  # 0 = True, 1 = False
                 self._notify_settings_changed()
 
-            ui.Label("Enabled", width=100)
-            enabled_checkbox = ui.CheckBox()
-            enabled_checkbox.model.set_value(self._settings.enabled)
-            enabled_checkbox.model.add_value_changed_fn(on_enabled_changed)
+            enabled_combo.model.add_item_changed_fn(on_enabled_changed)
 
     def _build_camera_selector(self):
         """Build the camera selection dropdown row."""
