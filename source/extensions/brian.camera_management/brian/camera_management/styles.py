@@ -1,11 +1,28 @@
 """Centralized UI styles for the Camera Management extension."""
 
+import pathlib
+
+import omni.kit.app
+from omni.ui import color as cl
+from omni.ui import url
+
+
 __all__ = [
     "COLORS",
     "SPACING",
     "LABEL_WIDTH",
     "get_window_style",
 ]
+
+# Get extension folder path for icon URLs
+EXTENSION_FOLDER_PATH = pathlib.Path(
+    omni.kit.app.get_app().get_extension_manager().get_extension_path_by_module(__name__)
+)
+
+# Define custom color and URL constants for CollapsableFrame icons
+cl.camera_mgmt_text = cl("#CCCCCC")
+url.camera_mgmt_icon_closed = f"{EXTENSION_FOLDER_PATH}/data/closed.svg"
+url.camera_mgmt_icon_opened = f"{EXTENSION_FOLDER_PATH}/data/opened.svg"
 
 # Color palette
 COLORS = {
@@ -150,22 +167,9 @@ def get_window_style() -> dict:
         },
 
         # Custom collapsable header styles
-        "Label::collapsable_name": {
-            "font_size": 14,
-            "color": COLORS["text"],
-        },
-        "Image::collapsable_opened": {
-            "color": COLORS["text"],
-        },
-        "Image::collapsable_opened:hovered": {
-            "color": COLORS["accent"],
-        },
-        "Image::collapsable_closed": {
-            "color": COLORS["text"],
-        },
-        "Image::collapsable_closed:hovered": {
-            "color": COLORS["accent"],
-        },
+        "Image::collapsable_opened": {"color": cl.camera_mgmt_text, "image_url": url.camera_mgmt_icon_opened},
+        "Image::collapsable_closed": {"color": cl.camera_mgmt_text, "image_url": url.camera_mgmt_icon_closed},
+
         "HeaderLine": {
             "color": 0x338F8F8F,
         },
