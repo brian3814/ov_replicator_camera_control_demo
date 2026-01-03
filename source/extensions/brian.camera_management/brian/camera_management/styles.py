@@ -27,9 +27,7 @@ url.camera_mgmt_icon_opened = f"{EXTENSION_FOLDER_PATH}/data/opened.svg"
 # Color palette
 COLORS = {
     "primary": 0xFF2E8B57,
-    "primary_hover": 0xFF3DA066,
     "danger": 0xFF8B2E2E,
-    "danger_hover": 0xFFA03A3A,
     "background": 0xFF404040,
     "background_dark": 0xFF2A2A2A,
     "background_darker": 0xFF1A1A1A,
@@ -65,33 +63,6 @@ def get_window_style() -> dict:
         "Label": {
             "color": COLORS["text"],
         },
-        "Label::title": {
-            "font_size": 20,
-            "color": COLORS["text"],
-        },
-        "Label::section_header": {
-            "font_size": 14,
-            "color": COLORS["text"],
-        },
-        "Label::status": {
-            "color": COLORS["text"],
-        },
-        "Label::status_capturing": {
-            "color": COLORS["status_capturing"],
-        },
-        "Label::status_error": {
-            "color": COLORS["status_error"],
-        },
-        "Label::status_stopped": {
-            "color": COLORS["status_stopped"],
-        },
-        "Label::warning": {
-            "color": COLORS["warning"],
-        },
-        "Label::log": {
-            "font_size": 12,
-            "color": COLORS["text"],
-        },
 
         # Button styles
         "Button": {
@@ -99,21 +70,6 @@ def get_window_style() -> dict:
         },
         "Button:hovered": {
             "background_color": 0xFF505050,
-        },
-        "Button::primary": {
-            "background_color": COLORS["primary"],
-        },
-        "Button::primary:hovered": {
-            "background_color": COLORS["primary_hover"],
-        },
-        "Button::danger": {
-            "background_color": COLORS["danger"],
-        },
-        "Button::danger:hovered": {
-            "background_color": COLORS["danger_hover"],
-        },
-        "Button::disabled": {
-            "background_color": COLORS["background"],
         },
 
         # CollapsableFrame styles
@@ -135,19 +91,13 @@ def get_window_style() -> dict:
         "IntField": {
             "background_color": COLORS["background_darker"],
         },
-        "FloatField": {
-            "background_color": COLORS["background_darker"],
-        },
         "StringField": {
             "background_color": COLORS["background_darker"],
         },
 
         # Slider styles
         "IntSlider": {
-            "background_color": COLORS["background_darker"],
-        },
-        "FloatSlider": {
-            "background_color": COLORS["background_darker"],
+            "background_color": COLORS["background"],
         },
 
         # ComboBox styles
@@ -157,11 +107,6 @@ def get_window_style() -> dict:
 
         # CheckBox styles
         "CheckBox": {
-            "background_color": COLORS["background_darker"],
-        },
-
-        # Log panel specific
-        "ScrollingFrame::log": {
             "background_color": COLORS["background_darker"],
         },
 

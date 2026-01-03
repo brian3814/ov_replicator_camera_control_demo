@@ -177,7 +177,7 @@ class CameraManagementWindow(ui.Window):
                 self._start_button = ui.Button(
                     "Start Capture",
                     clicked_fn=self._on_start_capture,
-                    style={"background_color": COLORS["primary"]}
+                    style={"background_color": COLORS["background"]}
                 )
                 self._stop_button = ui.Button(
                     "Stop Capture",
@@ -199,14 +199,14 @@ class CameraManagementWindow(ui.Window):
 
             with ui.HStack(height=30, spacing=10):
                 ui.Button(
-                    "Create Sample Scene",
-                    clicked_fn=self._on_create_sample_scene,
-                    style={"background_color": COLORS["primary"]}
+                    "Create Sample Layer",
+                    clicked_fn=self._on_create_sample_layer,
+                    style={"background_color": COLORS["background"]}
                 )
                 ui.Button(
-                    "Clear Sample",
-                    clicked_fn=self._on_clear_sample_scene,
-                    style={"background_color": COLORS["danger"]}
+                    "Clear Sample Layer",
+                    clicked_fn=self._on_clear_sample_layer,
+                    style={"background_color": COLORS["background"]}
                 )
 
     def _build_camera_list(self):
@@ -330,7 +330,7 @@ class CameraManagementWindow(ui.Window):
         self._add_log("Cleared all cameras")
         self._save_state()
 
-    def _on_create_sample_scene(self):
+    def _on_create_sample_layer(self):
         """Handle Create Sample Scene button click.
 
         Creates a sample scene with primitive objects (cube, sphere, cone),
@@ -345,7 +345,7 @@ class CameraManagementWindow(ui.Window):
         else:
             self._add_log("Failed to create sample scene")
 
-    def _on_clear_sample_scene(self):
+    def _on_clear_sample_layer(self):
         """Handle Clear Sample Scene button click.
 
         Removes all prims created by the sample scene.
