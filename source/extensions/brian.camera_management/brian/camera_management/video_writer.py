@@ -1,6 +1,8 @@
 import os
 import tempfile
 import shutil
+from typing import Optional
+
 import numpy as np
 from PIL import Image
 from omni.replicator.core import AnnotatorRegistry, Writer
@@ -85,6 +87,7 @@ class VideoWriter(Writer):
         self._width = width
         self._height = height
         self._frame_count = 0
+        self._last_written_path: Optional[str] = None
 
         # Create temp directory for frames
         self._temp_dir = tempfile.mkdtemp(prefix="video_capture_")
@@ -169,6 +172,7 @@ class VideoWriter(Writer):
                     writer.append_data(frame)
                 writer.close()
                 video_created = True
+                self._last_written_path = self._video_filepath
                 print(f"[brian.camera_management] Video saved: {self._video_filepath} ({self._frame_count} frames)")
             except Exception as mp4_error:
                 print(f"[brian.camera_management] MP4 encoding failed: {mp4_error}")
@@ -182,6 +186,7 @@ class VideoWriter(Writer):
                     # Convert RGBA to RGB for each frame
                     frames = [f[:, :, :3] if len(f.shape) == 3 and f.shape[2] == 4 else f for f in frames]
                     imageio_module.mimsave(gif_path, frames, fps=self._fps)
+                    self._last_written_path = gif_path
                     print(f"[brian.camera_management] GIF saved: {gif_path} ({self._frame_count} frames)")
                 except Exception as gif_error:
                     print(f"[brian.camera_management] GIF encoding also failed: {gif_error}")
@@ -209,3 +214,8 @@ class VideoWriter(Writer):
     def frame_count(self) -> int:
         """Return the number of frames captured."""
         return self._frame_count
+
+    @property
+    def last_written_path(self) -> Optional[str]:
+        """Return path to the last successfully written file."""
+        return self._last_written_path

@@ -42,8 +42,7 @@ class CaptureController:
         """
         self._on_capture_complete = on_capture_complete
         self._on_status_changed = on_status_changed
-        self._camera_manager = CameraManager(on_capture_callback=self._handle_capture_complete
-        )
+        self._camera_manager = CameraManager(on_capture_callback=self._handle_capture_complete)
         self._status = CaptureStatus.STOPPED
 
     @property

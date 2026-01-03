@@ -2,6 +2,7 @@
 
 import os
 from datetime import datetime
+from typing import Optional
 
 import numpy as np
 from PIL import Image
@@ -34,6 +35,7 @@ class ImageWriter(Writer):
         self._image_format = image_format.lower()
         self._frame_count = 0
         self._capture_start_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self._last_written_path: Optional[str] = None
 
         # Ensure output directory exists
         os.makedirs(self._output_dir, exist_ok=True)
@@ -71,6 +73,8 @@ class ImageWriter(Writer):
             else:
                 img.save(filepath)
 
+            # Track last successfully written path
+            self._last_written_path = filepath
             self._frame_count += 1
 
         except Exception as e:
@@ -90,3 +94,8 @@ class ImageWriter(Writer):
     def frame_count(self) -> int:
         """Return the number of frames captured."""
         return self._frame_count
+
+    @property
+    def last_written_path(self) -> Optional[str]:
+        """Return path to the last successfully written file."""
+        return self._last_written_path

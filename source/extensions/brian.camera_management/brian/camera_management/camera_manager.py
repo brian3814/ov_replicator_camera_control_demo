@@ -226,19 +226,6 @@ class CameraManager:
                 # Step the orchestrator to capture (async version for Kit)
                 await rep.orchestrator.step_async()
 
-                # Construct expected output path
-                camera_name = camera.prim_path.split("/")[-1]
-                # BasicWriter uses frame number in filename
-                output_path = os.path.join(
-                    self._output_folder,
-                    camera_name,
-                    f"{camera_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{self._frame_count:06d}.png"
-                )
-                camera.last_capture_path = output_path
-
-                if self._on_capture_callback:
-                    self._on_capture_callback(camera.display_name, output_path)
-
             except Exception as e:
                 print(f"[brian.camera_management] Capture error for {camera.display_name}: {e}")
 
@@ -252,12 +239,20 @@ class CameraManager:
         if self._update_subscription:
             self._update_subscription = None
 
-        # Finalize and detach writers
+        # Finalize writers and extract last written paths
         for prim_path, writer in self._writers.items():
             try:
                 # Call on_final_frame for VideoWriter to finalize encoding
                 if hasattr(writer, 'on_final_frame'):
                     writer.on_final_frame()
+
+                # Update camera's last_capture_path from writer's actual written path
+                if hasattr(writer, 'last_written_path') and writer.last_written_path:
+                    for cam in self._active_cameras:
+                        if cam.prim_path == prim_path:
+                            cam.last_capture_path = writer.last_written_path
+                            break
+
                 writer.detach()
             except Exception as e:
                 print(f"[brian.camera_management] Error cleaning up writer: {e}")
