@@ -10,6 +10,9 @@
 
 """Camera panel widget for individual camera settings."""
 
+import os
+import subprocess
+import sys
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Set
 
@@ -77,6 +80,7 @@ class CameraPanelWidget:
         self._width_widget: Optional[ResolutionWidget] = None
         self._height_widget: Optional[ResolutionWidget] = None
         self._status_label: Optional[ui.Label] = None
+        self._last_capture_label: Optional[ui.Label] = None
 
         # Capture state tracking
         self._is_capturing: bool = False
@@ -107,6 +111,7 @@ class CameraPanelWidget:
                 self._build_camera_selector()
                 self._build_enabled_checkbox()
                 self._build_status_row()
+                self._build_last_capture_row()
                 self._build_fps_row()
                 self._build_resolution_controls()
                 self._build_preview_button()
@@ -159,6 +164,44 @@ class CameraPanelWidget:
             else:
                 self._status_label.text = "Idle"
                 self._status_label.style = {"color": COLORS["text_muted"]}
+
+    def _build_last_capture_row(self):
+        """Build the last captured file path row."""
+        with ui.HStack(height=25, spacing=SPACING):
+            ui.Label("Last Captured:", width=70)
+            path_text = self._settings.last_capture_path or ""
+            self._last_capture_label = ui.Label(
+                path_text,
+                elided_text=True,
+                style={"color": COLORS["text_muted"]}
+            )
+            ui.Button(
+                "Open",
+                width=50,
+                clicked_fn=self._open_last_capture
+            )
+
+    def _open_last_capture(self):
+        """Open the last captured file in the system default application."""
+        last_captured_path = self._settings.last_capture_path
+        print(f'Opening last captured file from {self._settings.prim_path}: {last_captured_path}')
+
+        if last_captured_path and os.path.exists(last_captured_path):
+            if os.name == "nt":  # Windows
+                os.startfile(last_captured_path)
+            elif os.name == "posix":  # macOS/Linux
+                subprocess.run(["open" if sys.platform == "darwin" else "xdg-open", last_captured_path])
+
+    def update_last_capture_path(self, path: Optional[str] = None):
+        """Update the last captured file path display.
+
+        Args:
+            path: The path to display. If None, uses settings.last_capture_path.
+        """
+        if path is not None:
+            self._settings.last_capture_path = path
+        if self._last_capture_label:
+            self._last_capture_label.text = self._settings.last_capture_path or ""
 
     def _build_camera_selector(self):
         """Build the camera selection dropdown row."""

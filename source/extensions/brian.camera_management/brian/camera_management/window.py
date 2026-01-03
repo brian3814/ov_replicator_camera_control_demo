@@ -521,6 +521,9 @@ class CameraManagementWindow(ui.Window):
         is_capturing = (status == CaptureStatus.CAPTURING)
         for panel in self._camera_panel_widgets:
             panel.set_capture_status(is_capturing)
+            # Update last capture path display when capture stops
+            if not is_capturing:
+                panel.update_last_capture_path()
 
         # Save state when capture stops (preserves last_capture_path)
         if status == CaptureStatus.STOPPED:
