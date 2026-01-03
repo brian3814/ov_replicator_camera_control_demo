@@ -82,6 +82,7 @@ class CameraManagementWindow(ui.Window):
         self._stop_button: Optional[ui.Button] = None
         self._status_widget: Optional[StatusBarWidget] = None
         self._log_widget: Optional[LogPanelWidget] = None
+        self._camera_panel_widgets: List[CameraPanelWidget] = []
 
         # Set the build function for deferred UI construction
         self.frame.set_build_fn(self._build_fn)
@@ -223,8 +224,9 @@ class CameraManagementWindow(ui.Window):
             if not self._camera_panels_container:
                 return
 
-            # Clear existing panels
+            # Clear existing panels and widget references
             self._camera_panels_container.clear()
+            self._camera_panel_widgets.clear()
 
             # Get cameras in use (excluding current selection in each panel)
             all_cameras = self._capture_controller.scan_scene_cameras()
@@ -253,6 +255,12 @@ class CameraManagementWindow(ui.Window):
                         callbacks=callbacks
                     )
                     panel.build()
+                    self._camera_panel_widgets.append(panel)
+
+            # Update capture status for newly built panels
+            is_capturing = self._capture_controller.is_capturing
+            for panel in self._camera_panel_widgets:
+                panel.set_capture_status(is_capturing)
 
         asyncio.ensure_future(_do_rebuild())
 
@@ -468,6 +476,11 @@ class CameraManagementWindow(ui.Window):
         if self._status_widget:
             self._status_widget.set_status(status)
         self._update_button_states()
+
+        # Update per-camera capture status
+        is_capturing = (status == CaptureStatus.CAPTURING)
+        for panel in self._camera_panel_widgets:
+            panel.set_capture_status(is_capturing)
 
     def _update_button_states(self):
         """Update button visual states based on capture status."""

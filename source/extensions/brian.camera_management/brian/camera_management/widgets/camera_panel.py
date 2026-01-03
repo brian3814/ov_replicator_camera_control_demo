@@ -76,6 +76,10 @@ class CameraPanelWidget:
         self._frame: Optional[ui.CollapsableFrame] = None
         self._width_widget: Optional[ResolutionWidget] = None
         self._height_widget: Optional[ResolutionWidget] = None
+        self._status_label: Optional[ui.Label] = None
+
+        # Capture state tracking
+        self._is_capturing: bool = False
 
     @property
     def settings(self) -> CameraSettings:
@@ -102,6 +106,7 @@ class CameraPanelWidget:
             with ui.VStack(spacing=SPACING, style={"margin": 5}):
                 self._build_camera_selector()
                 self._build_enabled_checkbox()
+                self._build_status_row()
                 self._build_fps_row()
                 self._build_resolution_controls()
                 self._build_preview_button()
@@ -125,9 +130,35 @@ class CameraPanelWidget:
             def on_enabled_changed(model, item):
                 selected = model.get_item_value_model().get_value_as_int()
                 self._settings.enabled = (selected == 0)  # 0 = True, 1 = False
+                self._update_status_display()
                 self._notify_settings_changed()
 
             enabled_combo.model.add_item_changed_fn(on_enabled_changed)
+
+    def _build_status_row(self):
+        """Build the capture status row."""
+        with ui.HStack(height=25, spacing=SPACING):
+            ui.Label("Status:", width=100)
+            self._status_label = ui.Label("Idle", style={"color": COLORS["text_muted"]})
+
+    def set_capture_status(self, is_capturing: bool):
+        """Update the capture status display.
+
+        Args:
+            is_capturing: Whether capture is currently active.
+        """
+        self._is_capturing = is_capturing
+        self._update_status_display()
+
+    def _update_status_display(self):
+        """Update the status label based on current capture and enabled state."""
+        if self._status_label:
+            if self._is_capturing and self._settings.enabled:
+                self._status_label.text = "Capturing"
+                self._status_label.style = {"color": COLORS["status_capturing"]}
+            else:
+                self._status_label.text = "Idle"
+                self._status_label.style = {"color": COLORS["text_muted"]}
 
     def _build_camera_selector(self):
         """Build the camera selection dropdown row."""
