@@ -113,11 +113,12 @@ class CameraManager:
                 )
 
             render_product = self._render_products.get(camera_settings.prim_path)
-            if render_product:
+            self._writers[camera_settings.prim_path] = writer
+
+            if render_product and camera_settings.enabled:
                 writer.attach([render_product])
-                self._writers[camera_settings.prim_path] = writer
-                return True
-            return False
+            return True
+
         except Exception as e:
             print(f"[brian.camera_management] Error setting up writer: {e}")
             return False
@@ -291,6 +292,28 @@ class CameraManager:
                     f"{cam.display_name}: Target {cam.fps} FPS capped by app ({self._measured_app_fps:.0f} FPS)"
                 )
         return warnings
+
+    def update_camera_enabled(self, prim_path: str, enabled: bool) -> None:
+        """Update writer attachment based on camera enabled state.
+
+        Args:
+            prim_path: The camera's prim path.
+            enabled: Whether the camera should be capturing.
+        """
+        writer = self._writers.get(prim_path)
+        render_product = self._render_products.get(prim_path)
+        print(writer, render_product, enabled)
+        if not writer or not render_product:
+            return
+
+        if enabled:
+            print(f'Camera {prim_path} writer attached')
+            # Reattach writer to resume capturing
+            writer.attach([render_product])
+        else:
+            print(f'Camera {prim_path} writer detached')
+            # Detach writer to stop capturing
+            writer.detach()
 
     def cleanup(self) -> None:
         """Release all resources."""

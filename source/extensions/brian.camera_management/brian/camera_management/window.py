@@ -372,8 +372,28 @@ class CameraManagementWindow(ui.Window):
             index: Index of the camera.
             settings: Updated settings.
         """
+
         if 0 <= index < len(self._camera_list):
-            self._camera_list[index] = settings
+            existing = self._camera_list[index]
+            old_enabled = existing.enabled
+
+            # Update properties in-place to preserve object identity
+            # This ensures camera_manager._active_cameras sees changes during capture
+            existing.prim_path = settings.prim_path
+            existing.display_name = settings.display_name
+            existing.width = settings.width
+            existing.height = settings.height
+            existing.fps = settings.fps
+            existing.enabled = settings.enabled
+            existing.output_rgb = settings.output_rgb
+            existing.capture_mode = settings.capture_mode
+
+            # Update writer attachment if enabled state changed during capture
+            if self._capture_controller.is_capturing:
+                self._capture_controller.update_camera_enabled(
+                    settings.prim_path,
+                    settings.enabled
+                )
 
     def _on_capture_mode_changed(self, index: int):
         """Handle capture mode change (rebuild UI to show/hide FPS).

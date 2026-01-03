@@ -170,6 +170,15 @@ class CaptureController:
 
         return folder_path
 
+    def update_camera_enabled(self, prim_path: str, enabled: bool) -> None:
+        """Update camera enabled state during capture.
+
+        Args:
+            prim_path: The camera's prim path.
+            enabled: Whether the camera should be capturing.
+        """
+        self._camera_manager.update_camera_enabled(prim_path, enabled)
+
     def cleanup(self):
         """Cleanup resources.
 
