@@ -26,20 +26,20 @@ url.camera_mgmt_icon_opened = f"{EXTENSION_FOLDER_PATH}/data/opened.svg"
 
 # Color palette
 COLORS = {
-    "primary": 0xFF2E8B57,           # Green - for primary actions
-    "primary_hover": 0xFF3DA066,     # Lighter green for hover
-    "danger": 0xFF8B2E2E,            # Red - for destructive/stop actions
-    "danger_hover": 0xFFA03A3A,      # Lighter red for hover
-    "background": 0xFF404040,        # Standard button/panel background
-    "background_dark": 0xFF2A2A2A,   # Darker background for panels
-    "background_darker": 0xFF1A1A1A, # Darkest background for log area
-    "text": 0xFFCCCCCC,              # Standard text color
-    "text_muted": 0xFF888888,        # Muted/secondary text
-    "accent": 0xFF00CC88,            # Accent color for titles
-    "status_capturing": 0xFF00FF00,  # Bright green for capturing status
-    "status_error": 0xFFFF0000,      # Red for error status
-    "status_stopped": 0xFFCCCCCC,    # Gray for stopped status
-    "warning": 0xFFFF6666,           # Warning color (e.g., "no cameras")
+    "primary": 0xFF2E8B57,
+    "secondary": 0xFF00CC88,
+    "primary_hover": 0xFF3DA066,
+    "danger": 0xFF8B2E2E,
+    "danger_hover": 0xFFA03A3A,
+    "background": 0xFF404040,
+    "background_dark": 0xFF2A2A2A,
+    "background_darker": 0xFF1A1A1A,
+    "text": 0xFFCCCCCC,
+    "text_muted": 0xFF888888,
+    "status_capturing": 0xFF00FF00,
+    "status_error": 0xFFFF0000,
+    "status_stopped": 0xFFCCCCCC,
+    "warning": 0xFFFF6666,
 }
 
 # Layout constants
@@ -68,7 +68,7 @@ def get_window_style() -> dict:
         },
         "Label::title": {
             "font_size": 20,
-            "color": COLORS["accent"],
+            "color": COLORS["secondary"],
         },
         "Label::section_header": {
             "font_size": 14,

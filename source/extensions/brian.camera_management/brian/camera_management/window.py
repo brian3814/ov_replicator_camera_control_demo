@@ -10,6 +10,7 @@ from omni.kit.window.filepicker import FilePickerDialog
 
 from .controllers import CaptureController, PreviewController
 from .models import CameraSettings, CaptureStatus, GlobalSettings
+from .scene_builder import SceneBuilder
 from .styles import COLORS, get_window_style
 from .widgets import (
     CameraPanelCallbacks,
@@ -109,7 +110,7 @@ class CameraManagementWindow(ui.Window):
         """Build the window title."""
         ui.Label(
             "Camera Capture Settings",
-            style={"font_size": 20, "color": COLORS["accent"]},
+            style={"font_size": 20, "color": COLORS["primary"]},
             alignment=ui.Alignment.CENTER,
             height=30
         )
@@ -179,6 +180,18 @@ class CameraManagementWindow(ui.Window):
                     "Clear All",
                     clicked_fn=self._on_clear_all,
                     style={"background_color": COLORS["background"]}
+                )
+
+            with ui.HStack(height=30, spacing=10):
+                ui.Button(
+                    "Create Sample Scene",
+                    clicked_fn=self._on_create_sample_scene,
+                    style={"background_color": COLORS["primary"]}
+                )
+                ui.Button(
+                    "Clear Sample",
+                    clicked_fn=self._on_clear_sample_scene,
+                    style={"background_color": COLORS["danger"]}
                 )
 
     def _build_camera_list(self):
@@ -291,6 +304,33 @@ class CameraManagementWindow(ui.Window):
         self._camera_list.clear()
         self._rebuild_camera_panels()
         self._add_log("Cleared all cameras")
+
+    def _on_create_sample_scene(self):
+        """Handle Create Sample Scene button click.
+
+        Creates a sample scene with primitive objects (cube, sphere, cone),
+        lighting, and three demo cameras positioned to view them.
+        """
+        self._add_log("Creating sample scene...")
+
+        success, camera_paths = SceneBuilder.create_sample_scene()
+
+        if success:
+            self._add_log(f"Sample scene created with 3 objects, light, and {len(camera_paths)} cameras")
+        else:
+            self._add_log("Failed to create sample scene")
+
+    def _on_clear_sample_scene(self):
+        """Handle Clear Sample Scene button click.
+
+        Removes all prims created by the sample scene.
+        """
+        success = SceneBuilder.clear_sample_scene()
+
+        if success:
+            self._add_log("Sample scene cleared")
+        else:
+            self._add_log("Failed to clear sample scene")
 
     def _on_preview_camera(self, index: int):
         """Handle camera preview toggle.
