@@ -11,6 +11,7 @@ from omni.kit.window.filepicker import FilePickerDialog
 from .controllers import CaptureController, PreviewController
 from .models import CameraSettings, CaptureStatus, GlobalSettings
 from .scene_builder import SceneBuilder
+from .state_manager import StateManager
 from .styles import COLORS, get_window_style
 from .widgets import (
     CameraPanelCallbacks,
@@ -66,6 +67,9 @@ class CameraManagementWindow(ui.Window):
             on_status_changed=self._on_status_changed
         )
 
+        # Initialize state manager
+        self._state_manager = StateManager()
+
         # Initialize state
         self._global_settings = GlobalSettings()
         self._camera_list: List[CameraSettings] = []
@@ -74,6 +78,9 @@ class CameraManagementWindow(ui.Window):
         self._global_settings.output_folder = os.path.join(
             os.path.expanduser("~"), "Documents", "CameraCaptures"
         )
+
+        # Load saved state if available
+        self._load_saved_state()
 
         # UI widget references
         self._camera_panels_container: Optional[ui.VStack] = None
@@ -89,6 +96,9 @@ class CameraManagementWindow(ui.Window):
 
     def destroy(self):
         """Cleanup resources when window is destroyed."""
+        # Save state before destroying
+        self._save_state()
+
         # Exit preview if active
         self._preview_controller.cleanup()
         self._capture_controller.cleanup()
@@ -106,6 +116,10 @@ class CameraManagementWindow(ui.Window):
                 self._build_capture_controls()
                 self._build_camera_list()
                 self._build_log_section()
+
+        # Populate camera panels with any loaded state
+        if self._camera_list:
+            self._rebuild_camera_panels()
 
     def _build_title(self):
         """Build the window title."""
@@ -290,6 +304,7 @@ class CameraManagementWindow(ui.Window):
         self._camera_list.append(new_settings)
         self._rebuild_camera_panels()
         self._add_log(f"Added camera: {new_settings.display_name}")
+        self._save_state()
 
     def _on_remove_camera(self, index: int):
         """Handle camera removal.
@@ -304,6 +319,7 @@ class CameraManagementWindow(ui.Window):
             removed = self._camera_list.pop(index)
             self._rebuild_camera_panels()
             self._add_log(f"Removed camera: {removed.display_name}")
+            self._save_state()
 
     def _on_clear_all(self):
         """Handle Clear All button click."""
@@ -312,6 +328,7 @@ class CameraManagementWindow(ui.Window):
         self._camera_list.clear()
         self._rebuild_camera_panels()
         self._add_log("Cleared all cameras")
+        self._save_state()
 
     def _on_create_sample_scene(self):
         """Handle Create Sample Scene button click.
@@ -394,6 +411,7 @@ class CameraManagementWindow(ui.Window):
                     settings.prim_path,
                     settings.enabled
                 )
+            self._save_state()
 
     def _on_capture_mode_changed(self, index: int):
         """Handle capture mode change (rebuild UI to show/hide FPS).
@@ -409,6 +427,7 @@ class CameraManagementWindow(ui.Window):
             self._global_settings.output_folder = dirname
             if self._output_folder_field:
                 self._output_folder_field.model.set_value(dirname)
+            self._save_state()
             dialog.hide()
 
         def on_cancel(filename: str, dirname: str):
@@ -437,6 +456,7 @@ class CameraManagementWindow(ui.Window):
             model: The field's value model.
         """
         self._global_settings.output_folder = model.get_value_as_string()
+        self._save_state()
 
     def _on_start_capture(self):
         """Handle Start Capture button click."""
@@ -502,6 +522,10 @@ class CameraManagementWindow(ui.Window):
         for panel in self._camera_panel_widgets:
             panel.set_capture_status(is_capturing)
 
+        # Save state when capture stops (preserves last_capture_path)
+        if status == CaptureStatus.STOPPED:
+            self._save_state()
+
     def _update_button_states(self):
         """Update button visual states based on capture status."""
         is_capturing = self._capture_controller.is_capturing
@@ -544,3 +568,23 @@ class CameraManagementWindow(ui.Window):
         """
         if self._log_widget:
             self._log_widget.add_entry(message)
+
+    def _save_state(self):
+        """Save current state to disk."""
+        self._state_manager.save_state(
+            self._global_settings.output_folder,
+            self._camera_list
+        )
+
+    def _load_saved_state(self):
+        """Load saved state from disk if available."""
+        state = self._state_manager.load_state()
+        if state:
+            # Restore output folder
+            if state.get("output_folder"):
+                self._global_settings.output_folder = state["output_folder"]
+
+            # Restore camera list
+            cameras = state.get("cameras", [])
+            if cameras:
+                self._camera_list = cameras
