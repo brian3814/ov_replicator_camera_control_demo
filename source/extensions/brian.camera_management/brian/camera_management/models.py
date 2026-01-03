@@ -23,7 +23,7 @@ class CameraSettings:
     display_name: str
     width: int = 640
     height: int = 480
-    interval_frames: int = 60
+    fps: int = 60
     enabled: bool = True
     output_rgb: bool = True
     last_capture_path: Optional[str] = None

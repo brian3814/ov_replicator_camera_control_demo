@@ -42,7 +42,8 @@ class CaptureController:
         """
         self._on_capture_complete = on_capture_complete
         self._on_status_changed = on_status_changed
-        self._camera_manager = CameraManager(on_capture_callback=self._handle_capture_complete)
+        self._camera_manager = CameraManager(on_capture_callback=self._handle_capture_complete
+        )
         self._status = CaptureStatus.STOPPED
 
     @property
@@ -70,6 +71,23 @@ class CaptureController:
             List of camera prim paths found in the scene.
         """
         return self._camera_manager.scan_scene_cameras()
+
+    def get_fps_warnings(self) -> List[str]:
+        """Get warnings for cameras whose FPS exceeds app FPS.
+
+        Returns:
+            List of warning messages for FPS-capped cameras.
+        """
+        return self._camera_manager.get_fps_warnings()
+
+    @property
+    def measured_app_fps(self) -> float:
+        """Get the measured application frame rate.
+
+        Returns:
+            The measured app FPS.
+        """
+        return self._camera_manager.measured_app_fps
 
     def start(self, cameras: List[CameraSettings], output_folder: str) -> bool:
         """Start capture for the specified cameras.

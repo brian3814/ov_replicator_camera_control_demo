@@ -9,6 +9,7 @@ import omni.replicator.core as rep
 from pxr import UsdGeom
 
 from .models import CameraSettings, CaptureStatus, CaptureMode
+from .image_writer import ImageWriter
 from .video_writer import VideoWriter
 
 
@@ -30,6 +31,12 @@ class CameraManager:
         self._output_folder: str = ""
         self._on_capture_callback = on_capture_callback
         self._is_capturing: bool = False
+
+        # Time-based FPS capture tracking
+        self._elapsed_time: Dict[str, float] = {}  # prim_path -> accumulated time
+        self._measured_app_fps: float = 60.0  # Measured app frame rate
+        self._fps_sample_count: int = 0
+        self._fps_sample_time: float = 0.0
 
     def scan_scene_cameras(self) -> List[str]:
         """
@@ -98,12 +105,11 @@ class CameraManager:
                     height=camera_settings.height
                 )
             else:
-                # Image mode - use BasicWriter
-                writer = rep.WriterRegistry.get("BasicWriter")
-                writer.initialize(
+                # Image mode - use custom ImageWriter
+                writer = ImageWriter(
                     output_dir=camera_output,
-                    rgb=camera_settings.output_rgb,
-                    frame_padding=6
+                    camera_name=camera_name,
+                    image_format="png"
                 )
 
             render_product = self._render_products.get(camera_settings.prim_path)
@@ -136,9 +142,9 @@ class CameraManager:
             return False
 
         self._output_folder = output_folder
-        self._active_cameras = [cam for cam in cameras if cam.enabled]
+        self._active_cameras = list(cameras)  # Create a copy to avoid clearing original
 
-        if not self._active_cameras:
+        if not any(cam.enabled for cam in self._active_cameras):
             print("[brian.camera_management] No enabled cameras to capture")
             return False
 
@@ -147,15 +153,20 @@ class CameraManager:
         self._output_folder = os.path.join(output_folder, f"capture_{timestamp}")
         os.makedirs(self._output_folder, exist_ok=True)
 
-        # Set up render products and writers for all enabled cameras
+        # Set up render products and writers for ALL cameras (enabled check is in _on_update)
         for cam in self._active_cameras:
             cam.frame_counter = 0
+            self._elapsed_time[cam.prim_path] = 0.0  # Initialize time tracking
             if not self.create_render_product(cam):
                 self.stop_capture()
                 return False
             if not self._setup_writer(cam, self._output_folder):
                 self.stop_capture()
                 return False
+
+        # Reset FPS measurement
+        self._fps_sample_count = 0
+        self._fps_sample_time = 0.0
 
         # Subscribe to update events
         update_stream = omni.kit.app.get_app().get_update_event_stream()
@@ -170,19 +181,36 @@ class CameraManager:
         return True
 
     def _on_update(self, event) -> None:
-        """Frame update callback - check intervals and capture."""
+        """Frame update callback - use time-based capture for accurate FPS."""
         if not self._is_capturing:
             return
 
         self._frame_count += 1
 
+        # Get delta time from event payload
+        dt = event.payload.get("dt", 1.0 / 60.0)  # Fallback to 60fps
+
+        # Measure app FPS (sample over 1 second)
+        self._fps_sample_count += 1
+        self._fps_sample_time += dt
+        if self._fps_sample_time >= 1.0:
+            self._measured_app_fps = self._fps_sample_count / self._fps_sample_time
+            self._fps_sample_count = 0
+            self._fps_sample_time = 0.0
+
         for camera in self._active_cameras:
             if not camera.enabled:
                 continue
 
-            camera.frame_counter += 1
-            if camera.frame_counter >= camera.interval_frames:
-                camera.frame_counter = 0
+            # Accumulate elapsed time for this camera
+            self._elapsed_time[camera.prim_path] += dt
+
+            # Calculate capture interval from FPS (e.g., 30 FPS = 0.0333s interval)
+            capture_interval = 1.0 / camera.fps
+
+            # Capture when enough time has passed
+            if self._elapsed_time[camera.prim_path] >= capture_interval:
+                self._elapsed_time[camera.prim_path] -= capture_interval
                 self._trigger_capture(camera)
 
     def _trigger_capture(self, camera: CameraSettings) -> None:
@@ -203,7 +231,7 @@ class CameraManager:
                 output_path = os.path.join(
                     self._output_folder,
                     camera_name,
-                    f"rgb_{self._frame_count:06d}.png"
+                    f"{camera_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{self._frame_count:06d}.png"
                 )
                 camera.last_capture_path = output_path
 
@@ -236,6 +264,7 @@ class CameraManager:
         self._writers.clear()
         self._render_products.clear()
         self._active_cameras.clear()
+        self._elapsed_time.clear()
 
         print("[brian.camera_management] Capture stopped")
 
@@ -243,6 +272,25 @@ class CameraManager:
     def is_capturing(self) -> bool:
         """Return whether capture is currently active."""
         return self._is_capturing
+
+    @property
+    def measured_app_fps(self) -> float:
+        """Return the measured application frame rate."""
+        return self._measured_app_fps
+
+    def get_fps_warnings(self) -> List[str]:
+        """Return warnings for cameras whose FPS exceeds app FPS.
+
+        Returns:
+            List of warning messages for cameras that are FPS-capped.
+        """
+        warnings = []
+        for cam in self._active_cameras:
+            if cam.enabled and cam.fps > self._measured_app_fps:
+                warnings.append(
+                    f"{cam.display_name}: Target {cam.fps} FPS capped by app ({self._measured_app_fps:.0f} FPS)"
+                )
+        return warnings
 
     def cleanup(self) -> None:
         """Release all resources."""

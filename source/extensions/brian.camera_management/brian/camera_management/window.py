@@ -427,8 +427,22 @@ class CameraManagementWindow(ui.Window):
 
         if success:
             self._add_log("Capture started")
+            # Schedule FPS warning check after measurement stabilizes
+            self._start_fps_warning_check()
         else:
             self._add_log("Failed to start capture")
+
+    def _start_fps_warning_check(self):
+        """Check and warn about FPS capping after measurement stabilizes."""
+        async def _check_fps():
+            # Wait for FPS measurement to stabilize (1.5 seconds)
+            await asyncio.sleep(1.5)
+            if self._capture_controller.is_capturing:
+                warnings = self._capture_controller.get_fps_warnings()
+                for warning in warnings:
+                    self._add_log(f"Warning: {warning}")
+
+        asyncio.ensure_future(_check_fps())
 
     def _on_stop_capture(self):
         """Handle Stop Capture button click."""

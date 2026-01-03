@@ -27,7 +27,6 @@ url.camera_mgmt_icon_opened = f"{EXTENSION_FOLDER_PATH}/data/opened.svg"
 # Color palette
 COLORS = {
     "primary": 0xFF2E8B57,
-    "secondary": 0xFF00CC88,
     "primary_hover": 0xFF3DA066,
     "danger": 0xFF8B2E2E,
     "danger_hover": 0xFFA03A3A,
@@ -68,7 +67,7 @@ def get_window_style() -> dict:
         },
         "Label::title": {
             "font_size": 20,
-            "color": COLORS["secondary"],
+            "color": COLORS["text"],
         },
         "Label::section_header": {
             "font_size": 14,

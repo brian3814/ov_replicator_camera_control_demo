@@ -43,7 +43,7 @@ class CameraPanelWidget:
     """Widget for displaying and editing a single camera's settings.
 
     Encapsulates a CollapsableFrame with camera selection, resolution,
-    interval, preview, capture mode, and output settings.
+    fps, preview, capture mode, and output settings.
     """
 
     def __init__(
@@ -101,18 +101,28 @@ class CameraPanelWidget:
         with self._frame:
             with ui.VStack(spacing=SPACING, style={"margin": 5}):
                 self._build_camera_selector()
-                self._build_interval_row()
+                self._build_enabled_checkbox()
+                self._build_fps_row()
                 self._build_resolution_controls()
                 self._build_preview_button()
                 self._build_capture_mode()
 
-                # Conditional UI based on capture mode
-                if self._settings.capture_mode == CaptureMode.VIDEO:
-                    self._build_fps_field()
-                else:
+                if self._settings.capture_mode != CaptureMode.VIDEO:
                     self._build_output_types()
 
         return self._frame
+
+    def _build_enabled_checkbox(self):
+        """Build the enabled checkbox row."""
+        with ui.HStack(height=0, spacing=SPACING):
+            def on_enabled_changed(model):
+                self._settings.enabled = model.get_value_as_bool()
+                self._notify_settings_changed()
+
+            ui.Label("Enabled", width=100)
+            enabled_checkbox = ui.CheckBox()
+            enabled_checkbox.model.set_value(self._settings.enabled)
+            enabled_checkbox.model.add_value_changed_fn(on_enabled_changed)
 
     def _build_camera_selector(self):
         """Build the camera selection dropdown row."""
@@ -139,7 +149,7 @@ class CameraPanelWidget:
 
                 combo = ui.ComboBox(current_index, *display_items)
 
-                def on_camera_changed(model):
+                def on_camera_changed(model, item):
                     selected = model.get_item_value_model().get_value_as_int()
                     if selected in selectable_indices:
                         self._settings.prim_path = self._all_cameras[selected]
@@ -163,19 +173,20 @@ class CameraPanelWidget:
                 clicked_fn=lambda: self._callbacks.on_remove(self._index)
             )
 
-    def _build_interval_row(self):
-        """Build the interval frames input row."""
-        with ui.HStack(height=25, spacing=SPACING):
-            ui.Label("Interval (Frames):", width=120)
-            interval_field = ui.IntField(width=80)
-            interval_field.model.set_value(self._settings.interval_frames)
+    def _build_fps_row(self):
+        """Build the FPS input row."""
 
-            def on_interval_changed(model):
-                self._settings.interval_frames = model.get_value_as_int()
+        with ui.HStack(height=25, spacing=SPACING):
+            ui.Label("FPS:", width=50)
+            fps_field = ui.IntField(width=80)
+            fps_field.model.set_value(self._settings.fps)
+
+            def on_fps_changed(model):
+                value = max(1, min(120, model.get_value_as_int()))
+                self._settings.fps = value
                 self._notify_settings_changed()
 
-            interval_field.model.add_value_changed_fn(on_interval_changed)
-
+            fps_field.model.add_value_changed_fn(on_fps_changed)
     def _build_resolution_controls(self):
         """Build the width and height resolution controls."""
         # Width control
