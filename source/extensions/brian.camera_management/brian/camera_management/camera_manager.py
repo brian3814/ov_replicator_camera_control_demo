@@ -226,6 +226,12 @@ class CameraManager:
                 # Step the orchestrator to capture (async version for Kit)
                 await rep.orchestrator.step_async()
 
+                # Get the actual written path from the writer for callback
+                writer = self._writers.get(camera.prim_path)
+                if writer and hasattr(writer, 'last_written_path') and writer.last_written_path:
+                    if self._on_capture_callback:
+                        self._on_capture_callback(camera.display_name, writer.last_written_path)
+
             except Exception as e:
                 print(f"[brian.camera_management] Capture error for {camera.display_name}: {e}")
 
