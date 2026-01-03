@@ -117,9 +117,6 @@ class CameraPanelWidget:
                 self._build_preview_button()
                 self._build_capture_mode()
 
-                if self._settings.capture_mode != CaptureMode.VIDEO:
-                    self._build_output_types()
-
         return self._frame
 
     def _build_enabled_checkbox(self):
@@ -352,20 +349,6 @@ class CameraPanelWidget:
 
             fps_field.model.add_value_changed_fn(on_fps_changed)
 
-    def _build_output_types(self):
-        """Build the output types selector (for image mode)."""
-        with ui.CollapsableFrame("Image Output Types", collapsed=True):
-            with ui.VStack(spacing=3):
-                with ui.HStack(height=20):
-                    rgb_checkbox = ui.CheckBox(width=20)
-                    rgb_checkbox.model.set_value(self._settings.output_rgb)
-
-                    def on_rgb_changed(model):
-                        self._settings.output_rgb = model.get_value_as_bool()
-                        self._notify_settings_changed()
-
-                    rgb_checkbox.model.add_value_changed_fn(on_rgb_changed)
-                    ui.Label("RGB", width=100)
 
     def _notify_settings_changed(self):
         """Notify that settings have changed."""

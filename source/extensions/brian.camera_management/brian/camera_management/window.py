@@ -402,7 +402,6 @@ class CameraManagementWindow(ui.Window):
             existing.height = settings.height
             existing.fps = settings.fps
             existing.enabled = settings.enabled
-            existing.output_rgb = settings.output_rgb
             existing.capture_mode = settings.capture_mode
 
             # Update writer attachment if enabled state changed during capture

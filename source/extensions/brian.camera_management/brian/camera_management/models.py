@@ -25,7 +25,6 @@ class CameraSettings:
     height: int = 480
     fps: int = 30
     enabled: bool = True
-    output_rgb: bool = True
     last_capture_path: Optional[str] = None
     frame_counter: int = 0
     capture_mode: CaptureMode = CaptureMode.IMAGE
@@ -43,7 +42,6 @@ class CameraSettings:
             "height": self.height,
             "fps": self.fps,
             "enabled": self.enabled,
-            "output_rgb": self.output_rgb,
             "last_capture_path": self.last_capture_path,
             "capture_mode": self.capture_mode.name,
         }
@@ -66,7 +64,6 @@ class CameraSettings:
             height=data.get("height", 480),
             fps=data.get("fps", 30),
             enabled=data.get("enabled", True),
-            output_rgb=data.get("output_rgb", True),
             last_capture_path=data.get("last_capture_path"),
             capture_mode=capture_mode,
         )
