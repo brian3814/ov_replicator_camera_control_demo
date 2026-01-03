@@ -158,9 +158,14 @@ class CameraManagementWindow(ui.Window):
                 self._output_folder_field.model.set_value(self._global_settings.output_folder)
                 self._output_folder_field.model.add_value_changed_fn(self._on_output_folder_changed)
                 ui.Button(
-                    "Change Folder",
-                    width=100,
+                    "Change",
+                    width=50,
                     clicked_fn=self._on_change_folder
+                )
+                ui.Button(
+                    "Open",
+                    width=50,
+                    clicked_fn=self._on_open_output_folder
                 )
 
     def _build_capture_controls(self):
@@ -217,7 +222,7 @@ class CameraManagementWindow(ui.Window):
             collapsed=False,
             build_header_fn=lambda collapsed, title: self._build_collapsable_header(collapsed, title)
         ):
-            self._camera_panels_container = ui.VStack(spacing=5)
+            self._camera_panels_container = ui.VStack(height=0, spacing=5)
 
     def _build_log_section(self):
         """Build the log section."""
@@ -419,6 +424,19 @@ class CameraManagementWindow(ui.Window):
             index: Index of the camera.
         """
         self._rebuild_camera_panels()
+
+    def _on_open_output_folder(self):
+        """Open the output folder in the system file explorer."""
+        folder = self._global_settings.output_folder
+        if folder and os.path.exists(folder):
+            if os.name == "nt":  # Windows
+                os.startfile(folder)
+            elif os.name == "posix":  # macOS/Linux
+                import subprocess
+                import sys
+                subprocess.run(["open" if sys.platform == "darwin" else "xdg-open", folder])
+        else:
+            self._add_log(f"Folder does not exist: {folder}")
 
     def _on_change_folder(self):
         """Handle Change Folder button click."""
