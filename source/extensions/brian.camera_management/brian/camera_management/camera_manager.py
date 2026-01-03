@@ -11,6 +11,7 @@ from pxr import UsdGeom
 from .models import CameraSettings, CaptureStatus, CaptureMode
 from .image_writer import ImageWriter
 from .video_writer import VideoWriter
+from .usd_camera_utils import UsdCameraUtils
 
 
 class CameraManager:
@@ -158,6 +159,8 @@ class CameraManager:
         for cam in self._active_cameras:
             cam.frame_counter = 0
             self._elapsed_time[cam.prim_path] = 0.0  # Initialize time tracking
+            # Apply camera optical properties to USD before creating render product
+            UsdCameraUtils.apply_settings_to_usd(cam.prim_path, cam)
             if not self.create_render_product(cam):
                 self.stop_capture()
                 return False

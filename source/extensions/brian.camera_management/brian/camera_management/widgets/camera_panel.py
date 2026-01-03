@@ -1,13 +1,3 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-#
-# NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
-# property and proprietary rights in and to this material, related
-# documentation and any modifications thereto. Any use, reproduction,
-# disclosure or distribution of this material and related documentation
-# without an express license agreement from NVIDIA CORPORATION or
-# its affiliates is strictly prohibited.
-
 """Camera panel widget for individual camera settings."""
 
 import os
@@ -20,7 +10,9 @@ import omni.ui as ui
 
 from ..models import CameraSettings, CaptureMode
 from ..styles import COLORS, SPACING
+from ..usd_camera_utils import UsdCameraUtils
 from .resolution_widget import ResolutionWidget
+from .camera_property_widget import CameraPropertyWidget
 
 __all__ = ["CameraPanelWidget", "CameraPanelCallbacks"]
 
@@ -82,6 +74,12 @@ class CameraPanelWidget:
         self._status_label: Optional[ui.Label] = None
         self._last_capture_label: Optional[ui.Label] = None
 
+        # Camera property widgets
+        self._focal_length_widget: Optional[CameraPropertyWidget] = None
+        self._focus_distance_widget: Optional[CameraPropertyWidget] = None
+        self._exposure_widget: Optional[CameraPropertyWidget] = None
+        self._fov_widget: Optional[CameraPropertyWidget] = None
+
         # Capture state tracking
         self._is_capturing: bool = False
 
@@ -114,6 +112,7 @@ class CameraPanelWidget:
                 self._build_last_capture_row()
                 self._build_fps_row()
                 self._build_resolution_controls()
+                self._build_camera_properties()
                 self._build_preview_button()
                 self._build_capture_mode()
 
@@ -302,6 +301,136 @@ class CameraPanelWidget:
         """
         self._settings.height = value
         self._notify_settings_changed()
+
+    def _build_camera_properties(self):
+        """Build camera optical property controls in a collapsible section."""
+        with ui.CollapsableFrame("Camera Properties", collapsed=True):
+            with ui.VStack(spacing=SPACING):
+                # FOV control (linked to focal length)
+                self._fov_widget = CameraPropertyWidget(
+                    label="FOV",
+                    min_val=10.0,
+                    max_val=120.0,
+                    initial=self._settings.fov,
+                    step=1.0,
+                    precision=1,
+                    unit="deg",
+                    on_change=self._on_fov_changed
+                )
+                self._fov_widget.build()
+
+                # Focal Length control (linked to FOV)
+                self._focal_length_widget = CameraPropertyWidget(
+                    label="Focal Length",
+                    min_val=10.0,
+                    max_val=300.0,
+                    initial=self._settings.focal_length,
+                    step=1.0,
+                    precision=1,
+                    unit="mm",
+                    on_change=self._on_focal_length_changed
+                )
+                self._focal_length_widget.build()
+
+                # Focus Distance control
+                self._focus_distance_widget = CameraPropertyWidget(
+                    label="Focus Distance",
+                    min_val=10.0,
+                    max_val=10000.0,
+                    initial=self._settings.focus_distance,
+                    step=10.0,
+                    precision=0,
+                    unit="cm",
+                    on_change=self._on_focus_distance_changed
+                )
+                self._focus_distance_widget.build()
+
+                # Exposure control
+                self._exposure_widget = CameraPropertyWidget(
+                    label="Exposure",
+                    min_val=-10.0,
+                    max_val=10.0,
+                    initial=self._settings.exposure,
+                    step=0.1,
+                    precision=1,
+                    unit="EV",
+                    on_change=self._on_exposure_changed
+                )
+                self._exposure_widget.build()
+
+                # Sync from USD button
+                ui.Button(
+                    "Sync from Scene",
+                    height=25,
+                    clicked_fn=self._sync_from_usd,
+                    tooltip="Load current camera values from USD scene"
+                )
+
+    def _on_fov_changed(self, value: float):
+        """Handle FOV change - calculate focal length and update USD.
+
+        Args:
+            value: The new FOV in degrees.
+        """
+        self._settings.fov = value
+        # Calculate corresponding focal length
+        focal_length = UsdCameraUtils.calculate_focal_length(value)
+        self._settings.focal_length = focal_length
+        # Update USD
+        UsdCameraUtils.set_focal_length(self._settings.prim_path, focal_length)
+        # Update focal length widget display
+        if self._focal_length_widget:
+            self._focal_length_widget.set_value(focal_length)
+        self._notify_settings_changed()
+
+    def _on_focal_length_changed(self, value: float):
+        """Handle focal length change - update USD and sync FOV.
+
+        Args:
+            value: The new focal length in mm.
+        """
+        self._settings.focal_length = value
+        UsdCameraUtils.set_focal_length(self._settings.prim_path, value)
+        # Calculate corresponding FOV and update widget
+        fov = UsdCameraUtils.calculate_fov(value)
+        self._settings.fov = fov
+        if self._fov_widget:
+            self._fov_widget.set_value(fov)
+        self._notify_settings_changed()
+
+    def _on_focus_distance_changed(self, value: float):
+        """Handle focus distance change - update USD immediately.
+
+        Args:
+            value: The new focus distance in cm.
+        """
+        self._settings.focus_distance = value
+        UsdCameraUtils.set_focus_distance(self._settings.prim_path, value)
+        self._notify_settings_changed()
+
+    def _on_exposure_changed(self, value: float):
+        """Handle exposure change - update USD immediately.
+
+        Args:
+            value: The new exposure value in EV.
+        """
+        self._settings.exposure = value
+        UsdCameraUtils.set_exposure(self._settings.prim_path, value)
+        self._notify_settings_changed()
+
+    def _sync_from_usd(self):
+        """Sync widget values from current USD camera properties."""
+        if UsdCameraUtils.sync_settings_from_usd(self._settings.prim_path, self._settings):
+            # Update widget displays
+            if self._fov_widget:
+                self._fov_widget.set_value(self._settings.fov)
+            if self._focal_length_widget:
+                self._focal_length_widget.set_value(self._settings.focal_length)
+            if self._focus_distance_widget:
+                self._focus_distance_widget.set_value(self._settings.focus_distance)
+            if self._exposure_widget:
+                self._exposure_widget.set_value(self._settings.exposure)
+            self._notify_settings_changed()
 
     def _build_preview_button(self):
         """Build the preview toggle button."""

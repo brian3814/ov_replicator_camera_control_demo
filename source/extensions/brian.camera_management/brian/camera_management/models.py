@@ -28,6 +28,11 @@ class CameraSettings:
     last_capture_path: Optional[str] = None
     frame_counter: int = 0
     capture_mode: CaptureMode = CaptureMode.IMAGE
+    # Camera optical properties
+    focal_length: float = 24.0  # mm
+    focus_distance: float = 400.0  # cm
+    exposure: float = 0.0  # EV (exposure compensation)
+    fov: float = 73.7  # degrees (calculated from 24mm focal length on 36mm sensor)
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize camera settings to a dictionary.
@@ -44,6 +49,10 @@ class CameraSettings:
             "enabled": self.enabled,
             "last_capture_path": self.last_capture_path,
             "capture_mode": self.capture_mode.name,
+            "focal_length": self.focal_length,
+            "focus_distance": self.focus_distance,
+            "exposure": self.exposure,
+            "fov": self.fov,
         }
 
     @classmethod
@@ -66,6 +75,10 @@ class CameraSettings:
             enabled=data.get("enabled", True),
             last_capture_path=data.get("last_capture_path"),
             capture_mode=capture_mode,
+            focal_length=data.get("focal_length", 24.0),
+            focus_distance=data.get("focus_distance", 400.0),
+            exposure=data.get("exposure", 0.0),
+            fov=data.get("fov", 73.7),
         )
 
 
