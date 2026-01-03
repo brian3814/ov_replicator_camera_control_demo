@@ -39,6 +39,9 @@ class CameraManager:
         self._fps_sample_count: int = 0
         self._fps_sample_time: float = 0.0
 
+        # Prevent overlapping step_async calls which can cause frame drops
+        self._step_pending: bool = False
+
     def scan_scene_cameras(self) -> List[str]:
         """
         Traverse USD stage and return all Camera prim paths.
@@ -168,9 +171,10 @@ class CameraManager:
                 self.stop_capture()
                 return False
 
-        # Reset FPS measurement
+        # Reset FPS measurement and capture state
         self._fps_sample_count = 0
         self._fps_sample_time = 0.0
+        self._step_pending = False
 
         # Subscribe to update events
         update_stream = omni.kit.app.get_app().get_update_event_stream()
@@ -212,10 +216,12 @@ class CameraManager:
             # Calculate capture interval from FPS (e.g., 30 FPS = 0.0333s interval)
             capture_interval = 1.0 / camera.fps
 
-            # Capture when enough time has passed
+            # Capture when enough time has passed (and no step is pending)
             if self._elapsed_time[camera.prim_path] >= capture_interval:
-                self._elapsed_time[camera.prim_path] -= capture_interval
-                self._trigger_capture(camera)
+                if not self._step_pending:
+                    self._elapsed_time[camera.prim_path] -= capture_interval
+                    self._trigger_capture(camera)
+                # If step is pending, don't subtract time - we'll capture on next frame
 
     def _trigger_capture(self, camera: CameraSettings) -> None:
         """
@@ -224,6 +230,8 @@ class CameraManager:
         Args:
             camera: Camera settings for the camera to capture from.
         """
+        self._step_pending = True
+
         async def _do_capture():
             try:
                 # Step the orchestrator to capture (async version for Kit)
@@ -237,6 +245,8 @@ class CameraManager:
 
             except Exception as e:
                 print(f"[brian.camera_management] Capture error for {camera.display_name}: {e}")
+            finally:
+                self._step_pending = False
 
         asyncio.ensure_future(_do_capture())
 
