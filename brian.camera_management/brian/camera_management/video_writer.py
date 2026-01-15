@@ -146,6 +146,10 @@ class VideoWriter(Writer):
             self._cleanup()
             return
 
+        # Set expected path immediately so stop_capture() can read it
+        # (will be updated to .gif path if MP4 encoding fails)
+        self._last_written_path = self._video_filepath
+
         # Start async encoding to avoid blocking UI
         self._encoding_in_progress = True
         asyncio.ensure_future(self._encode_video_async())
