@@ -234,8 +234,8 @@ class CameraManager:
 
         async def _do_capture():
             try:
-                # Step the orchestrator to capture (async version for Kit)
-                await rep.orchestrator.step_async()
+                # Step the orchestrator to capture with timeout to prevent freeze
+                await asyncio.wait_for(rep.orchestrator.step_async(), timeout=5.0)
 
                 # Get the actual written path from the writer for callback
                 writer = self._writers.get(camera.prim_path)
@@ -243,6 +243,8 @@ class CameraManager:
                     if self._on_capture_callback:
                         self._on_capture_callback(camera.display_name, writer.last_written_path)
 
+            except asyncio.TimeoutError:
+                print(f"[brian.camera_management] Capture timeout for {camera.display_name}")
             except Exception as e:
                 print(f"[brian.camera_management] Capture error for {camera.display_name}: {e}")
             finally:
