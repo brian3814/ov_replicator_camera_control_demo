@@ -323,16 +323,13 @@ class CameraManager:
         """
         writer = self._writers.get(prim_path)
         render_product = self._render_products.get(prim_path)
-        print(writer, render_product, enabled)
         if not writer or not render_product:
             return
 
         if enabled:
-            print(f'Camera {prim_path} writer attached')
             # Reattach writer to resume capturing
             writer.attach([render_product])
         else:
-            print(f'Camera {prim_path} writer detached')
             # Detach writer to stop capturing
             writer.detach()
 
