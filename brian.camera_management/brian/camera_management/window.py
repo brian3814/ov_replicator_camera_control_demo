@@ -408,6 +408,11 @@ class CameraManagementWindow(ui.Window):
             existing.fps = settings.fps
             existing.enabled = settings.enabled
             existing.capture_mode = settings.capture_mode
+            # Optical properties
+            existing.focal_length = settings.focal_length
+            existing.focus_distance = settings.focus_distance
+            existing.exposure = settings.exposure
+            existing.fov = settings.fov
 
             # Update writer attachment if enabled state changed during capture
             if self._capture_controller.is_capturing:
