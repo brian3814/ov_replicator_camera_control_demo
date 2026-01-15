@@ -274,10 +274,14 @@ class CameraManager:
                         if cam.prim_path == prim_path:
                             cam.last_capture_path = writer.last_written_path
                             break
-
-                writer.detach()
             except Exception as e:
-                print(f"[brian.camera_management] Error cleaning up writer: {e}")
+                print(f"[brian.camera_management] Error finalizing writer: {e}")
+            finally:
+                # Always detach writer to prevent resource leaks
+                try:
+                    writer.detach()
+                except Exception as e:
+                    print(f"[brian.camera_management] Error detaching writer: {e}")
 
         self._writers.clear()
         self._render_products.clear()
