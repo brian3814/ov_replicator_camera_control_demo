@@ -1,5 +1,6 @@
 import asyncio
 import os
+import time
 from datetime import datetime
 from typing import List, Dict, Optional, Callable, Any
 
@@ -41,6 +42,12 @@ class CameraManager:
 
         # Prevent overlapping step_async calls which can cause frame drops
         self._step_pending: bool = False
+
+        # Capture statistics for actual FPS calculation
+        self._capture_start_time: float = 0.0
+        self._camera_frame_counts: Dict[str, int] = {}  # prim_path -> frames captured
+        self._total_capture_time: float = 0.0  # Total elapsed capture time
+        self._fps_drop_warnings: List[str] = []  # FPS drop events during capture
 
     def scan_scene_cameras(self) -> List[str]:
         """
@@ -176,6 +183,12 @@ class CameraManager:
         self._fps_sample_time = 0.0
         self._step_pending = False
 
+        # Initialize capture statistics
+        self._capture_start_time = time.time()
+        self._camera_frame_counts = {cam.prim_path: 0 for cam in self._active_cameras}
+        self._total_capture_time = 0.0
+        self._fps_drop_warnings = []
+
         # Subscribe to update events
         update_stream = omni.kit.app.get_app().get_update_event_stream()
         self._update_subscription = update_stream.create_subscription_to_pop(
@@ -198,6 +211,9 @@ class CameraManager:
         # Get delta time from event payload
         dt = event.payload.get("dt", 1.0 / 60.0)  # Fallback to 60fps
 
+        # Track total capture time
+        self._total_capture_time += dt
+
         # Measure app FPS (sample over 1 second)
         self._fps_sample_count += 1
         self._fps_sample_time += dt
@@ -205,6 +221,9 @@ class CameraManager:
             self._measured_app_fps = self._fps_sample_count / self._fps_sample_time
             self._fps_sample_count = 0
             self._fps_sample_time = 0.0
+
+            # Check for FPS drops and log warning (once per second max)
+            self._check_fps_drops()
 
         for camera in self._active_cameras:
             if not camera.enabled:
@@ -221,7 +240,23 @@ class CameraManager:
                 if not self._step_pending:
                     self._elapsed_time[camera.prim_path] -= capture_interval
                     self._trigger_capture(camera)
+                    # Track frame count for actual FPS calculation
+                    self._camera_frame_counts[camera.prim_path] = \
+                        self._camera_frame_counts.get(camera.prim_path, 0) + 1
                 # If step is pending, don't subtract time - we'll capture on next frame
+
+    def _check_fps_drops(self) -> None:
+        """Check if any camera's target FPS exceeds measured app FPS and log warning."""
+        for cam in self._active_cameras:
+            if cam.enabled and cam.fps > self._measured_app_fps:
+                warning = (
+                    f"FPS drop: {cam.display_name} target {cam.fps} FPS, "
+                    f"app running at {self._measured_app_fps:.1f} FPS"
+                )
+                # Only log if this is a new warning (avoid spam)
+                if warning not in self._fps_drop_warnings:
+                    self._fps_drop_warnings.append(warning)
+                    print(f"[brian.camera_management] Warning: {warning}")
 
     def _trigger_capture(self, camera: CameraSettings) -> None:
         """
@@ -256,14 +291,27 @@ class CameraManager:
         """Stop capture and clean up resources."""
         self._is_capturing = False
 
+        # Calculate total capture duration
+        capture_duration = self._total_capture_time if self._total_capture_time > 0 else 0.001
+
         # Unsubscribe from updates
         if self._update_subscription:
             self._update_subscription.unsubscribe()
             self._update_subscription = None
 
+        # Log capture summary and update VideoWriter FPS
+        self._log_capture_summary(capture_duration)
+
         # Finalize writers and extract last written paths
         for prim_path, writer in self._writers.items():
             try:
+                # For VideoWriter, update FPS to actual captured rate before encoding
+                if isinstance(writer, VideoWriter):
+                    actual_frames = self._camera_frame_counts.get(prim_path, 0)
+                    if actual_frames > 0 and capture_duration > 0:
+                        actual_fps = actual_frames / capture_duration
+                        writer.set_fps(actual_fps)
+
                 # Call on_final_frame for VideoWriter to finalize encoding
                 if hasattr(writer, 'on_final_frame'):
                     writer.on_final_frame()
@@ -313,6 +361,33 @@ class CameraManager:
                     f"{cam.display_name}: Target {cam.fps} FPS capped by app ({self._measured_app_fps:.0f} FPS)"
                 )
         return warnings
+
+    def _log_capture_summary(self, capture_duration: float) -> None:
+        """Log capture summary with actual vs target frame counts.
+
+        Args:
+            capture_duration: Total capture duration in seconds.
+        """
+        print(f"[brian.camera_management] === Capture Summary ===")
+        print(f"[brian.camera_management] Duration: {capture_duration:.2f}s")
+
+        for cam in self._active_cameras:
+            if not cam.enabled:
+                continue
+
+            actual_frames = self._camera_frame_counts.get(cam.prim_path, 0)
+            expected_frames = int(capture_duration * cam.fps)
+            actual_fps = actual_frames / capture_duration if capture_duration > 0 else 0
+
+            status = "OK" if actual_frames >= expected_frames * 0.95 else "DROPPED"
+            print(
+                f"[brian.camera_management] {cam.display_name}: "
+                f"{actual_frames}/{expected_frames} frames "
+                f"(actual: {actual_fps:.1f} FPS, target: {cam.fps} FPS) [{status}]"
+            )
+
+        if self._fps_drop_warnings:
+            print(f"[brian.camera_management] FPS warnings during capture: {len(self._fps_drop_warnings)}")
 
     def update_camera_enabled(self, prim_path: str, enabled: bool) -> None:
         """Update writer attachment based on camera enabled state.

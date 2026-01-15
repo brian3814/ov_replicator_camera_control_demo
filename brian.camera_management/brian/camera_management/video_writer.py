@@ -257,3 +257,14 @@ class VideoWriter(Writer):
     def is_encoding(self) -> bool:
         """Return whether video encoding is currently in progress."""
         return self._encoding_in_progress
+
+    def set_fps(self, fps: float) -> None:
+        """Set the FPS for video encoding.
+
+        This should be called before on_final_frame() to adjust the encoding
+        FPS to match the actual captured frame rate.
+
+        Args:
+            fps: The frames per second to use for encoding.
+        """
+        self._fps = max(1, int(round(fps)))
