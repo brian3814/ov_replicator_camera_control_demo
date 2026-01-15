@@ -258,6 +258,7 @@ class CameraManager:
 
         # Unsubscribe from updates
         if self._update_subscription:
+            self._update_subscription.unsubscribe()
             self._update_subscription = None
 
         # Finalize writers and extract last written paths
