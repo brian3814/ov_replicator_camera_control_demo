@@ -1,7 +1,8 @@
+import asyncio
 import os
 import tempfile
 import shutil
-from typing import Optional
+from typing import Optional, Callable
 
 import numpy as np
 from PIL import Image
@@ -70,7 +71,8 @@ class VideoWriter(Writer):
         video_filepath: str,
         fps: int = 30,
         width: int = 640,
-        height: int = 480
+        height: int = 480,
+        on_encoding_complete: Optional[Callable[[str], None]] = None
     ):
         """
         Initialize the video writer.
@@ -80,6 +82,7 @@ class VideoWriter(Writer):
             fps: Frames per second for the output video.
             width: Video width in pixels.
             height: Video height in pixels.
+            on_encoding_complete: Optional callback called when video encoding finishes.
         """
         super().__init__()  # Required: Initialize parent Writer class
         self._video_filepath = video_filepath
@@ -88,6 +91,8 @@ class VideoWriter(Writer):
         self._height = height
         self._frame_count = 0
         self._last_written_path: Optional[str] = None
+        self._on_encoding_complete = on_encoding_complete
+        self._encoding_in_progress = False
 
         # Create temp directory for frames
         self._temp_dir = tempfile.mkdtemp(prefix="video_capture_")
@@ -131,7 +136,7 @@ class VideoWriter(Writer):
             print(f"[brian.camera_management] Error saving frame: {e}")
 
     def on_final_frame(self):
-        """Convert temp frames to video and cleanup."""
+        """Start async video encoding. Returns immediately to avoid blocking UI."""
         if self._frame_count == 0:
             self._cleanup()
             return
@@ -141,6 +146,12 @@ class VideoWriter(Writer):
             self._cleanup()
             return
 
+        # Start async encoding to avoid blocking UI
+        self._encoding_in_progress = True
+        asyncio.ensure_future(self._encode_video_async())
+
+    async def _encode_video_async(self):
+        """Encode video frames asynchronously to prevent UI freeze."""
         try:
             # Get sorted frame files
             frame_files = sorted([
@@ -153,7 +164,7 @@ class VideoWriter(Writer):
                 print("[brian.camera_management] No frames to encode")
                 return
 
-            print(f"[brian.camera_management] Encoding {len(frame_files)} frames to video...")
+            print(f"[brian.camera_management] Encoding {len(frame_files)} frames to video (async)...")
 
             # Try MP4 encoding with ffmpeg backend
             video_created = False
@@ -164,12 +175,17 @@ class VideoWriter(Writer):
                     codec='libx264',
                     pixelformat='yuv420p'
                 )
-                for frame_file in frame_files:
+                for i, frame_file in enumerate(frame_files):
                     frame = imageio_module.imread(frame_file)
                     # Ensure RGB (not RGBA)
                     if len(frame.shape) == 3 and frame.shape[2] == 4:
                         frame = frame[:, :, :3]
                     writer.append_data(frame)
+
+                    # Yield control every 10 frames to keep UI responsive
+                    if i % 10 == 0:
+                        await asyncio.sleep(0)
+
                 writer.close()
                 video_created = True
                 self._last_written_path = self._video_filepath
@@ -182,18 +198,31 @@ class VideoWriter(Writer):
                 gif_path = self._video_filepath.rsplit('.', 1)[0] + '.gif'
                 try:
                     print("[brian.camera_management] Falling back to GIF format...")
-                    frames = [imageio_module.imread(f) for f in frame_files]
-                    # Convert RGBA to RGB for each frame
-                    frames = [f[:, :, :3] if len(f.shape) == 3 and f.shape[2] == 4 else f for f in frames]
+                    frames = []
+                    for i, f in enumerate(frame_files):
+                        frame = imageio_module.imread(f)
+                        # Convert RGBA to RGB
+                        if len(frame.shape) == 3 and frame.shape[2] == 4:
+                            frame = frame[:, :, :3]
+                        frames.append(frame)
+                        # Yield control periodically
+                        if i % 10 == 0:
+                            await asyncio.sleep(0)
+
                     imageio_module.mimsave(gif_path, frames, fps=self._fps)
                     self._last_written_path = gif_path
                     print(f"[brian.camera_management] GIF saved: {gif_path} ({self._frame_count} frames)")
                 except Exception as gif_error:
                     print(f"[brian.camera_management] GIF encoding also failed: {gif_error}")
 
+            # Notify completion if callback provided
+            if self._on_encoding_complete and self._last_written_path:
+                self._on_encoding_complete(self._last_written_path)
+
         except Exception as e:
             print(f"[brian.camera_management] Error creating video: {e}")
         finally:
+            self._encoding_in_progress = False
             self._cleanup()
 
     def _cleanup(self):
@@ -219,3 +248,8 @@ class VideoWriter(Writer):
     def last_written_path(self) -> Optional[str]:
         """Return path to the last successfully written file."""
         return self._last_written_path
+
+    @property
+    def is_encoding(self) -> bool:
+        """Return whether video encoding is currently in progress."""
+        return self._encoding_in_progress
