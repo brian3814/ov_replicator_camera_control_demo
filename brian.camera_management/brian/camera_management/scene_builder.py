@@ -2,6 +2,7 @@
 
 from typing import List, Tuple
 
+import omni.kit.commands
 import omni.replicator.core as rep
 import omni.usd
 
@@ -189,12 +190,17 @@ class SceneBuilder:
                 print("[brian.camera_management] No stage available for cleanup")
                 return False
 
-            deleted_count = 0
+            # Collect valid prim paths to delete
+            paths_to_delete = []
             for prim_path in cls._created_prims:
                 prim = stage.GetPrimAtPath(prim_path)
                 if prim and prim.IsValid():
-                    stage.RemovePrim(prim_path)
-                    deleted_count += 1
+                    paths_to_delete.append(prim_path)
+
+            # Use Kit command to properly remove prims from the layer
+            if paths_to_delete:
+                omni.kit.commands.execute("DeletePrims", paths=paths_to_delete)
+            deleted_count = len(paths_to_delete)
 
             cls._created_prims.clear()
             cls._created_camera_paths.clear()
